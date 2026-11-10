@@ -1,0 +1,5 @@
+# dsh-fc-games bundle patch: one Host row carrying the game-library service
+# and its token-protected HTTP route. The Client half is declared in package.json.
+- insert:
+    - id: dsh-fc-games
+      name: dsh-fc-games

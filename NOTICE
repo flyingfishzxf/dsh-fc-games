@@ -1,0 +1,26 @@
+dsh-fc-games third-party notices
+================================
+
+1. jsnes 2.1.0
+--------------
+Source: https://github.com/bfirsh/jsnes
+License: Apache License 2.0 (see vendor/jsnes-LICENSE.txt)
+Usage: bundled verbatim as vendor/jsnes.min.js and concatenated into client.js.
+The plugin drives jsnes' NES core and adapts its canvas/Web Audio approach for
+video output and sound.
+
+2. Game metadata and cover images
+---------------------------------
+Game search and file metadata come from public sources: the Internet Archive
+APIs, a curated GitHub NES collection, user-defined JSON sources, and game
+pages the user explicitly adds by URL. Cover images are public images attached
+to those sources and are displayed from the original hosts; the plugin does not
+redistribute them. Game titles, artwork, and ROMs remain the property of their
+respective rights holders.
+
+3. Game data
+------------
+The plugin contains no ROMs. Game files (direct `.nes` files or `.nes` entries
+inside ZIP archives) are fetched from the selected source only when the user
+explicitly starts a game. Users are responsible for playing only games they are
+legally entitled to play.

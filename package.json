@@ -1,0 +1,70 @@
+{
+  "name": "dsh-fc-games",
+  "version": "0.1.0",
+  "description": "FC/NES game library and emulator for the DSH Web right sidebar — multi-source search, ZIP support, custom sources, link parsing, covers, gamepad/keyboard input, save states, rewind, cheats and a Famicom-inspired UI. · DSH 右侧栏红白机游戏库与模拟器：多来源搜索、ZIP 解压、自定义源、链接解析、封面、手柄/键盘、存档、倒带、金手指和红白机风格界面。",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "lib",
+    "locale/*.json",
+    "icon.svg",
+    "cordis.patch.yml",
+    "vendor/jsnes.min.js",
+    "vendor/jsnes-LICENSE.txt",
+    "README.md",
+    "README.zh.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/flyingfishzxf/dsh-fc-games.git"
+  },
+  "homepage": "https://github.com/flyingfishzxf/dsh-fc-games#readme",
+  "bugs": {
+    "url": "https://github.com/flyingfishzxf/dsh-fc-games/issues"
+  },
+  "keywords": [
+    "deepseek",
+    "harness",
+    "dsh",
+    "dsh-plugin",
+    "nes",
+    "famicom",
+    "emulator",
+    "games",
+    "sidebar"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "~4.1.0",
+    "@deepseek-ai/dsh-typert-protocol": "*"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-connection",
+        "@deepseek-ai/dsh-api-remotes",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-slots"
+      ]
+    }
+  }
+}
