@@ -804,7 +804,7 @@ window.__ModuleLoader__.load({
     // --------------------------------------------------------------- audio
     var AUDIO_WORKLET =
       'class FCNesAudioProcessor extends AudioWorkletProcessor {' +
-      '  constructor() { super(); this.capacity = 8192; this.bufferL = new Float32Array(this.capacity);' +
+      '  constructor() { super(); this.capacity = 16384; this.bufferL = new Float32Array(this.capacity);' +
       '    this.bufferR = new Float32Array(this.capacity); this.readPos = 0; this.writePos = 0; this.count = 0;' +
       '    this.port.onmessage = (e) => { if (e.data.type !== "samples") return;' +
       '      const left = e.data.left, right = e.data.right, len = left.length;' +
@@ -831,8 +831,8 @@ window.__ModuleLoader__.load({
       this.node = null;
       this.ready = false;
       this.muted = false;
-      this.batchL = new Float32Array(128);
-      this.batchR = new Float32Array(128);
+      this.batchL = new Float32Array(1024);
+      this.batchR = new Float32Array(1024);
       this.batchPos = 0;
       this.starting = null;
     }
@@ -902,7 +902,7 @@ window.__ModuleLoader__.load({
       this.batchL[this.batchPos] = left;
       this.batchR[this.batchPos] = right;
       this.batchPos += 1;
-      if (this.batchPos >= 128) {
+      if (this.batchPos >= 1024) {
         this.node.port.postMessage({
           type: 'samples',
           left: this.batchL.slice(),
@@ -1097,6 +1097,7 @@ window.__ModuleLoader__.load({
       this.pressedKeys = new Set();
       this.pressedGamepad = new Map();
       this.gamepadPressed = new Map();
+      this.padTick = 0;
       this.controls = loadControls();
       this.autoFire = Object.assign({ a: false, b: false }, this.controls.autoFire || {});
       this.fireHeld = { 1: { a: false, b: false }, 2: { a: false, b: false } };
@@ -1362,12 +1363,12 @@ window.__ModuleLoader__.load({
             return;
           }
         }
-        this.audio.flush();
         this.frameCount += this.speed;
       }
       if (frames > 0) this.draw();
-      this.pollGamepads();
-      if (time - this.fpsAt >= 1000) {
+      this.padTick += 1;
+      if ((this.padTick & 1) === 0) this.pollGamepads();
+      if (time - this.fpsAt >= 2000) {
         this.fps = Math.round((this.frameCount * 1000) / (time - this.fpsAt));
         this.frameCount = 0;
         this.fpsAt = time;
@@ -2962,6 +2963,7 @@ window.__ModuleLoader__.load({
       var rewindWasPausedRef = useRef(false);
       var rewindBufRef = useRef([]);
       var autoBusyRef = useRef(false);
+      var rewindBusyRef = useRef(false);
       var batteryTimerRef = useRef(0);
       var toastTimerRef = useRef(0);
       var recordedRef = useRef(false);
@@ -3067,7 +3069,7 @@ window.__ModuleLoader__.load({
       var saveAuto = useCallback(async function () {
         var emu = emuRef.current;
         var key = activeKeyRef.current;
-        if (!emu || !key || autoBusyRef.current || brokenRef.current) return;
+        if (!emu || !key || autoBusyRef.current || rewindBusyRef.current || brokenRef.current) return;
         autoBusyRef.current = true;
         var data;
         var thumbnail;
@@ -3099,7 +3101,11 @@ window.__ModuleLoader__.load({
         if (batteryTimerRef.current) window.clearTimeout(batteryTimerRef.current);
         batteryTimerRef.current = window.setTimeout(function () {
           batteryTimerRef.current = 0;
-          saveAuto();
+          if (typeof window.requestIdleCallback === 'function') {
+            window.requestIdleCallback(saveAuto, { timeout: 2000 });
+          } else {
+            saveAuto();
+          }
         }, 10000);
       }, [saveAuto]);
 
@@ -3315,24 +3321,41 @@ window.__ModuleLoader__.load({
           }
         })();
 
+        var scheduleIdle = function (task) {
+          if (typeof window.requestIdleCallback === 'function') {
+            window.requestIdleCallback(task, { timeout: 2000 });
+          } else {
+            window.setTimeout(task, 0);
+          }
+        };
+
         autoTimerRef.current = window.setInterval(function () {
-          saveAuto();
+          scheduleIdle(saveAuto);
         }, 30000);
         var countdown = window.setInterval(function () {
-          if (rewindHoldRef.current) return;
+          if (rewindHoldRef.current || rewindBusyRef.current) return;
           var current = emuRef.current;
           if (!current || current.paused) return;
-          try {
-            rewindBufRef.current.push(current.snapshot());
-            while (rewindBufRef.current.length > 15) rewindBufRef.current.shift();
-          } catch (e) {
-            // ignore
-          }
-        }, 1000);
+          rewindBusyRef.current = true;
+          scheduleIdle(function () {
+            rewindBusyRef.current = false;
+            if (!mountRef.current) return;
+            var live = emuRef.current;
+            if (!live || live.paused || autoBusyRef.current) return;
+            try {
+              rewindBufRef.current.push(live.snapshot());
+              while (rewindBufRef.current.length > 6) rewindBufRef.current.shift();
+            } catch (e) {
+              // ignore
+            }
+          });
+        }, 3000);
         rewindTimerRef.current = countdown;
 
         var visibilityTimer = 0;
         var visibilityPaused = false;
+        var tabPaused = false;
+        var tabObserver = null;
         var onVisibility = function () {
           if (document.hidden) {
             if (visibilityTimer) window.clearTimeout(visibilityTimer);
@@ -3352,13 +3375,35 @@ window.__ModuleLoader__.load({
             window.clearTimeout(visibilityTimer);
             visibilityTimer = 0;
           }
-          if (visibilityPaused && emuRef.current) {
+          if (visibilityPaused && !tabPaused && emuRef.current) {
             visibilityPaused = false;
             emuRef.current.resume();
             setPaused(false);
           }
         };
         document.addEventListener('visibilitychange', onVisibility);
+
+        if (typeof window.IntersectionObserver === 'function' && stageRef.current) {
+          tabObserver = new window.IntersectionObserver(function (entries) {
+            var visible = entries.some(function (entry) { return entry.isIntersecting; });
+            if (!visible) {
+              var current = emuRef.current;
+              if (current && !current.paused) {
+                current.pause();
+                tabPaused = true;
+                setPaused(true);
+                scheduleIdle(saveAuto);
+              }
+              return;
+            }
+            if (tabPaused && !document.hidden && emuRef.current) {
+              tabPaused = false;
+              emuRef.current.resume();
+              setPaused(false);
+            }
+          }, { threshold: 0.01, rootMargin: '120px' });
+          tabObserver.observe(stageRef.current);
+        }
 
         var updatePads = function () {
           if (typeof navigator.getGamepads !== 'function') {
@@ -3376,6 +3421,7 @@ window.__ModuleLoader__.load({
 
         return function () {
           document.removeEventListener('visibilitychange', onVisibility);
+          if (tabObserver) tabObserver.disconnect();
           if (visibilityTimer) window.clearTimeout(visibilityTimer);
           window.removeEventListener('gamepadconnected', updatePads);
           window.removeEventListener('gamepaddisconnected', updatePads);

@@ -1,6 +1,6 @@
 {
   "name": "dsh-fc-games",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "FC/NES game library and emulator for the DSH Web right sidebar — multi-source search, ZIP support, custom sources, link parsing, covers, gamepad/keyboard input, save states, rewind, cheats and a Famicom-inspired UI. · DSH 右侧栏红白机游戏库与模拟器：多来源搜索、ZIP 解压、自定义源、链接解析、封面、手柄/键盘、存档、倒带、金手指和红白机风格界面。",
   "type": "module",
   "main": "index.js",

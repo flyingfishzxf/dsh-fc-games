@@ -21,6 +21,9 @@ The right-Sidebar tab contains:
   (Apache-2.0, bundled): keyboard and gamepad input, 2 players, save/load
   slots, autosave/continue, fast-forward, rewind, fullscreen, volume/mute,
   screenshots, FPS/speed display, and Game Genie cheats;
+- sustained-play tuning: rewind snapshots are sampled every 3 seconds (6
+  slots), autosaves run in idle time, audio is batched, and the emulator
+  pauses when the page or its right-sidebar tab is hidden;
 - local `.nes` import when a game is not available online.
 
 The page background fills the whole panel, while the centered content column
